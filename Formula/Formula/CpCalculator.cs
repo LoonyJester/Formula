@@ -210,8 +210,6 @@ namespace Formula
 
         }
 
-        #region Enums
-
         public enum ProcedureType
         {
             Depletion,
@@ -249,8 +247,6 @@ namespace Formula
             Override
         }
 
-        #endregion Enums
-
 
         public double Min(double a, double b)
         {
@@ -287,7 +283,7 @@ namespace Formula
             double Initial_Hct,
             double Target_End_Hct, double Avg_RF_Hct, double Replacement_Volume,
             ReplacementVolumeType Replacement_Volume_Override,
-            double Target_Depletion_Hct, double Blood_Warmer_Volume, int Flag = 0)
+            double Target_Depletion_Hct, double Blood_Warmer_Volume, int Flag)
         {
             string Predicted_Error = "None";
 
