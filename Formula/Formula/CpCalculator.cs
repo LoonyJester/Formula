@@ -286,7 +286,7 @@ double initialModeVolume, double initialModeHct, double initialModeFcr)
         public object EP(ProcedureType Procedure_Type, GenderType Gender, double Weight, WeightType Weight_Units, double Height, 
             HeightType Height_Units, double Total_Blood_Volume, BloodVolumeType Total_Blood_Volume_Override, double FCR, double Initial_Hct,
       double Target_End_Hct, double Avg_RF_Hct, double Replacement_Volume, ReplacementVolumeType Replacement_Volume_Override, 
-      double Target_Depletion_Hct, double Blood_Warmer_Volume, double Flag = 0)
+      double Target_Depletion_Hct, double Blood_Warmer_Volume, int Flag = 0)
         {
             object functionReturnValue = null;
 
@@ -417,6 +417,8 @@ string            Entered_Divert_Prime = "Yes";
             double Target_Replacement_Volume = Entered_Replacement_Volume;
             double CIR_Limit = Calculated_CIR_Limit;
 
+            double Qwb_Dep=0;
+            double Qwb_Ex=0;
             if (Procedure_Type == ProcedureType.Exchange)
             {
                 double Qrf_IP = 0;
@@ -441,6 +443,7 @@ string            Entered_Divert_Prime = "Yes";
                 double Total_Return_Volume = (Qrf_IP + Qp_IP) * Est_Mode_Time;
                 double Mode_RF_Volume = Qrf_IP * Est_Mode_Time;
                 double Mode_Other_RF_Volume = 0;
+                double[] Estimation;
                 if (IP_Replaced_Volume < IP_Return_Path_Volume)
                 {
                     IP_Return_Path_Volume = IP_Return_Path_Volume - IP_Replaced_Volume;
@@ -450,7 +453,7 @@ string            Entered_Divert_Prime = "Yes";
                     }
                     double Partial_Time = IP_Return_Path_Volume / (Qwb_IP - Qac_IP);
 
-                    double[] Estimation = RBCXTT(Qwb_IP - Qac_IP, Qrf_IP, Qp_IP, 0, Partial_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
+                    Estimation = RBCXTT(Qwb_IP - Qac_IP, Qrf_IP, Qp_IP, 0, Partial_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
                     Estimation_Volume = Estimation[0];
                     Estimation_Hct = Estimation[1];
@@ -468,7 +471,7 @@ string            Entered_Divert_Prime = "Yes";
                 {
                     double Partial_Time = (Total_Return_Volume - IP_Return_Path_Volume) / (Qwb_IP - Qac_IP);
 
-                    double[] Estimation = RBCXTT(Qwb_IP - Qac_IP, Qrf_IP, Qp_IP, Avg_RF_Hct, Partial_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
+                    Estimation = RBCXTT(Qwb_IP - Qac_IP, Qrf_IP, Qp_IP, Avg_RF_Hct, Partial_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
                     Estimation_Volume = Estimation[0];
                     Estimation_Hct = Estimation[1];
@@ -478,7 +481,7 @@ string            Entered_Divert_Prime = "Yes";
                 Predicted_Replacement_Volume = Mode_RF_Volume;
                 Predicted_Other_RF_Volume = Mode_Other_RF_Volume;
 
-                double Qwb_Ex = Max_WB_Rate;
+                Qwb_Ex = Max_WB_Rate;
                 double Qac_Ex = Qwb_Ex / (AC_Ratio + 1);
                 if (Qac_Ex < 1.3)
                 {
@@ -521,15 +524,15 @@ string            Entered_Divert_Prime = "Yes";
                 }
 
                 double Qrf_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 1);
-                Qp_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 2);
+                double Qp_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 2);
                 Est_Mode_Time = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 3);
-                Max_Hct = max(Estimation_Hct, Target_End_Hct);
-                Plasma_AC_Fraction = 1 / (((1 - Max_Hct) * AC_Ratio) + 1);
-                Estimated_CIR = (Qrf_Ex * Cit_Con_Rep_Fluid) + (Qp_Ex * Cit_Con_AC * Plasma_AC_Fraction);
+                double Max_Hct = Max(Estimation_Hct, Target_End_Hct);
+                double Plasma_AC_Fraction = 1 / (((1 - Max_Hct) * AC_Ratio) + 1);
+                double Estimated_CIR = (Qrf_Ex * Cit_Con_Rep_Fluid) + (Qp_Ex * Cit_Con_AC * Plasma_AC_Fraction);
 
                 if (Estimated_CIR > CIR_Limit)
                 {
-                    CIR_Adjustment = CIR_Limit / Estimated_CIR;
+                    double  CIR_Adjustment = CIR_Limit / Estimated_CIR;
                     Qwb_Ex = Qwb_Ex * CIR_Adjustment;
                     Qac_Ex = Qac_Ex * CIR_Adjustment;
                     if (Qac_Ex < 1.3)
@@ -541,11 +544,11 @@ string            Entered_Divert_Prime = "Yes";
                     Est_Mode_Time = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 3);
                 }
 
-                prbc_Hct = 0.8;
-                AC_Dilution = AC_Ratio / (AC_Ratio + 1);
-                Max_Hct = max(Estimation_Hct, Target_End_Hct);
-                Hct_ACWB = AC_Dilution * Max_Hct;
-                Qp_max = Qwb_Ex * (1 - (Hct_ACWB / prbc_Hct));
+                double prbc_Hct = 0.8;
+                double AC_Dilution = AC_Ratio / (AC_Ratio + 1);
+                Max_Hct = Max(Estimation_Hct, Target_End_Hct);
+                double Hct_ACWB = AC_Dilution * Max_Hct;
+                double Qp_max = Qwb_Ex * (1 - (Hct_ACWB / prbc_Hct));
 
                 if (Qp_Ex > Qp_max)
                 {
@@ -579,8 +582,8 @@ string            Entered_Divert_Prime = "Yes";
 
                 if (Estimation_Hct > Target_End_Hct)
                 {
-                    Plasma_AC_Fraction_Start = 1 / (((1 - Estimation_Hct) * AC_Ratio) + 1);
-                    Plasma_AC_Fraction_End = 1 / (((1 - Target_End_Hct) * AC_Ratio) + 1);
+                    double Plasma_AC_Fraction_Start = 1 / (((1 - Estimation_Hct) * AC_Ratio) + 1);
+                    double Plasma_AC_Fraction_End = 1 / (((1 - Target_End_Hct) * AC_Ratio) + 1);
                     Plasma_AC_Fraction = (Plasma_AC_Fraction_Start + Plasma_AC_Fraction_End) / 2;
                 }
                 else
@@ -588,13 +591,13 @@ string            Entered_Divert_Prime = "Yes";
                     Plasma_AC_Fraction = 1 / (((1 - Target_End_Hct) * AC_Ratio) + 1);
                 }
 
-                Mode_Time = Est_Mode_Time;
+                double Mode_Time = Est_Mode_Time;
 
                 Estimation = RBCXTT(Qwb_Ex - Qac_Ex, Qrf_Ex, Qp_Ex, Avg_RF_Hct, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
-                Current_Patient_Volume = Estimation(0);
-                Current_Patient_Hct = Estimation(1);
-                Current_FCR = Estimation(2);
+                double Current_Patient_Volume = Estimation[0];
+                double Current_Patient_Hct = Estimation[1];
+                double Current_FCR = Estimation[2];
 
                 Estimation_Volume = Current_Patient_Volume;
                 Estimation_Hct = Current_Patient_Hct;
@@ -607,26 +610,26 @@ string            Entered_Divert_Prime = "Yes";
             }
             else
             {
-                Qwb_IP = min(Max_WB_Rate, 50);
+                double Qwb_IP = Min(Max_WB_Rate, 50);
 
-                Qac_IP = Qwb_IP / (AC_Ratio + 1);
+                double Qac_IP = Qwb_IP / (AC_Ratio + 1);
                 if (Qac_IP < 1.3)
                 {
                     Predicted_Error = "AC Ratio Unachievable";
                 }
-                Qrf_IP_Est = Qwb_IP - Qac_IP;
+                double Qrf_IP_Est = Qwb_IP - Qac_IP;
 
-                Remaining_IP_WB_Volume = 105 - IP_WB_Volume;
-                Est_Mode_Time = Remaining_IP_WB_Volume / Qwb_IP;
+                double Remaining_IP_WB_Volume = 105 - IP_WB_Volume;
+                double Est_Mode_Time = Remaining_IP_WB_Volume / Qwb_IP;
 
-                Mode_RF_Volume = 0;
-                Mode_Other_RF_Volume = (Qwb_IP - Qac_IP) * Est_Mode_Time;
+                double Mode_RF_Volume = 0;
+                double Mode_Other_RF_Volume = (Qwb_IP - Qac_IP) * Est_Mode_Time;
 
-                Estimation = RBCXTT(Qwb_IP - Qac_IP, Qwb_IP - Qac_IP, 0, 0, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
+                double[] Estimation = RBCXTT(Qwb_IP - Qac_IP, Qwb_IP - Qac_IP, 0, 0, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
-                Current_Patient_Volume = Estimation(0);
-                Current_Patient_Hct = Estimation(1);
-                Current_FCR = Estimation(2);
+                double Current_Patient_Volume = Estimation[0];
+                double Current_Patient_Hct = Estimation[1];
+                double Current_FCR = Estimation[2];
 
                 Estimation_Volume = Current_Patient_Volume;
                 Estimation_Hct = Current_Patient_Hct;
@@ -635,27 +638,27 @@ string            Entered_Divert_Prime = "Yes";
                 Predicted_Replacement_Volume = Mode_RF_Volume;
                 Predicted_Other_RF_Volume = Mode_Other_RF_Volume;
 
-                Start_Depletion_Hct = Estimation_Hct;
-                Volume_to_Remove = -Estimation_Volume * Log(Target_Depletion_Hct / Estimation_Hct);
+                double Start_Depletion_Hct = Estimation_Hct;
+                double Volume_to_Remove = -Estimation_Volume * Math.Log(Target_Depletion_Hct / Estimation_Hct);
 
-                Qwb_Dep = min(Max_WB_Rate, EqQb);
+                Qwb_Dep = Min(Max_WB_Rate, EqQb);
 
-                Qac_Dep = Qwb_Dep / (AC_Ratio + 1);
+                double Qac_Dep = Qwb_Dep / (AC_Ratio + 1);
 
                 if (Qac_Dep < 1.3)
                 {
                     Predicted_Error = "AC Ratio Unachievable";
                 }
 
-                prbc_Hct = 0.8;
-                AC_Dilution = AC_Ratio / (AC_Ratio + 1);
-                Avg_Depletion_Hct = (Estimation_Hct + Target_Depletion_Hct) / 2;
-                Avg_Hct_ACWB = AC_Dilution * Avg_Depletion_Hct;
-                Qp_Ideal_Est = Qwb_Dep * (1 - (Avg_Hct_ACWB / prbc_Hct));
+                double prbc_Hct = 0.8;
+                double AC_Dilution = AC_Ratio / (AC_Ratio + 1);
+                double Avg_Depletion_Hct = (Estimation_Hct + Target_Depletion_Hct) / 2;
+                double Avg_Hct_ACWB = AC_Dilution * Avg_Depletion_Hct;
+                double Qp_Ideal_Est = Qwb_Dep * (1 - (Avg_Hct_ACWB / prbc_Hct));
 
-                Qrf_Dep_Est = Qwb_Dep - Qac_Dep - Qp_Ideal_Est;
+                double Qrf_Dep_Est = Qwb_Dep - Qac_Dep - Qp_Ideal_Est;
 
-                if (Procedure_Type == "Depletion/Exchange")
+                if (Procedure_Type == ProcedureType.DepletionExchange)
                 {
                     Volume_to_Remove = Volume_to_Remove - PD_Return_Path_Volume;
                 }
@@ -666,16 +669,16 @@ string            Entered_Divert_Prime = "Yes";
                 }
 
                 Est_Mode_Time = Volume_to_Remove / (Qwb_Dep - Qac_Dep);
-                Est_Depletion_Time = Est_Mode_Time;
+                double Est_Depletion_Time = Est_Mode_Time;
 
                 Mode_RF_Volume = 0;
                 Mode_Other_RF_Volume = Qrf_Dep_Est * Est_Mode_Time;
 
                 Estimation = RBCXTT(Qwb_Dep - Qac_Dep, Qwb_Dep - Qac_Dep, 0, 0, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
-                Current_Patient_Volume = Estimation(0);
-                Current_Patient_Hct = Estimation(1);
-                Current_FCR = Estimation(2);
+                Current_Patient_Volume = Estimation[0];
+                Current_Patient_Hct = Estimation[1];
+                Current_FCR = Estimation[2];
 
                 Estimation_Volume = Current_Patient_Volume;
                 Estimation_Hct = Current_Patient_Hct;
@@ -684,28 +687,28 @@ string            Entered_Divert_Prime = "Yes";
                 Predicted_Replacement_Volume = Predicted_Replacement_Volume + Mode_RF_Volume;
                 Predicted_Other_RF_Volume = Predicted_Other_RF_Volume + Mode_Other_RF_Volume;
 
-                Plasma_AC_Fraction_Start = 1 / (((1 - Start_Depletion_Hct) * AC_Ratio) + 1);
-                Plasma_AC_Fraction_End = 1 / (((1 - Estimation_Hct) * AC_Ratio) + 1);
-                Plasma_AC_Fraction = (Plasma_AC_Fraction_Start + Plasma_AC_Fraction_End) / 2;
+                double Plasma_AC_Fraction_Start = 1 / (((1 - Start_Depletion_Hct) * AC_Ratio) + 1);
+                double Plasma_AC_Fraction_End = 1 / (((1 - Estimation_Hct) * AC_Ratio) + 1);
+                double Plasma_AC_Fraction = (Plasma_AC_Fraction_Start + Plasma_AC_Fraction_End) / 2;
 
 
-                if (Procedure_Type == "Depletion/Exchange")
+                if (Procedure_Type == ProcedureType.DepletionExchange)
                 {
-                    Qwb_PD = Max_WB_Rate;
+                    double Qwb_PD = Max_WB_Rate;
 
-                    Qac_PD = Qwb_PD / (AC_Ratio + 1);
+                    double Qac_PD = Qwb_PD / (AC_Ratio + 1);
                     if (Qac_PD < 1.3)
                     {
                         Predicted_Error = "AC Ratio Unachievable";
                     }
-
-                    if (Replacement_Volume_Override == "Override")
+                    double PD_FCR;
+                    if (Replacement_Volume_Override == ReplacementVolumeType.Override)
                     {
                         if (Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume <= 0)
                         {
                             Predicted_Error = "Increase_Replacement_Volume";
                         }
-                        Calculated_FCR = CalculatedFCRVR(Estimation_Hct, Avg_RF_Hct, Target_End_Hct, Target_Volume - Estimation_Volume, Estimation_Volume, Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume, Qwb_PD - Qac_PD, 1);
+                        double Calculated_FCR = CalculatedFCRVR(Estimation_Hct, Avg_RF_Hct, Target_End_Hct, Target_Volume - Estimation_Volume, Estimation_Volume, Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume, Qwb_PD - Qac_PD, 1);
                         PD_FCR = Calculated_FCR * Estimation_FCR;
 
                         if (PD_FCR <= 0)
@@ -719,6 +722,7 @@ string            Entered_Divert_Prime = "Yes";
                     }
                     else
                     {
+                        
                         PD_FCR = Target_FCR;
 
                         if (PD_FCR <= 0)
@@ -736,15 +740,15 @@ string            Entered_Divert_Prime = "Yes";
                         Predicted_Error = "Increase_Target_Fluid_Balance";
                     }
 
-                    Qrf_PD = CalculatedFCR(Qwb_PD - Qac_PD, Estimation_Volume, Target_Volume - Estimation_Volume, Estimation_Hct, Estimation_FCR, Target_End_Hct, PD_FCR, Avg_RF_Hct, 1);
-                    Qp_PD = CalculatedFCR(Qwb_PD - Qac_PD, Estimation_Volume, Target_Volume - Estimation_Volume, Estimation_Hct, Estimation_FCR, Target_End_Hct, PD_FCR, Avg_RF_Hct, 2);
+                   double Qrf_PD = CalculatedFCR(Qwb_PD - Qac_PD, Estimation_Volume, Target_Volume - Estimation_Volume, Estimation_Hct, Estimation_FCR, Target_End_Hct, PD_FCR, Avg_RF_Hct, 1);
+                    double Qp_PD = CalculatedFCR(Qwb_PD - Qac_PD, Estimation_Volume, Target_Volume - Estimation_Volume, Estimation_Hct, Estimation_FCR, Target_End_Hct, PD_FCR, Avg_RF_Hct, 2);
 
-                    Max_Hct = max(Estimation_Hct, Target_End_Hct);
+                    double Max_Hct = Max(Estimation_Hct, Target_End_Hct);
                     Plasma_AC_Fraction = 1 / (((1 - Max_Hct) * AC_Ratio) + 1);
-                    Estimated_CIR = (Qrf_PD * Cit_Con_Rep_Fluid) + (Qp_PD * Cit_Con_AC * Plasma_AC_Fraction);
+                    double Estimated_CIR = (Qrf_PD * Cit_Con_Rep_Fluid) + (Qp_PD * Cit_Con_AC * Plasma_AC_Fraction);
                     if (Estimated_CIR > CIR_Limit)
                     {
-                        CIR_Adjustment = CIR_Limit / Estimated_CIR;
+                        double CIR_Adjustment = CIR_Limit / Estimated_CIR;
                         Qwb_PD = Qwb_PD * CIR_Adjustment;
                         Qac_PD = Qac_PD * CIR_Adjustment;
                         if (Qac_PD < 1.3)
@@ -757,9 +761,9 @@ string            Entered_Divert_Prime = "Yes";
 
                     prbc_Hct = 0.8;
                     AC_Dilution = AC_Ratio / (AC_Ratio + 1);
-                    Max_Hct = max(Estimation_Hct, Target_End_Hct);
-                    Hct_ACWB = AC_Dilution * Max_Hct;
-                    Qp_max = Qwb_PD * (1 - (Hct_ACWB / prbc_Hct));
+                    Max_Hct = Max(Estimation_Hct, Target_End_Hct);
+                    double Hct_ACWB = AC_Dilution * Max_Hct;
+                    double Qp_max = Qwb_PD * (1 - (Hct_ACWB / prbc_Hct));
                     if (Qp_PD > Qp_max)
                     {
                         Predicted_Error = "Increase Target End Hct";
@@ -788,7 +792,7 @@ string            Entered_Divert_Prime = "Yes";
                         Predicted_Error = "Decrease Target FCR";
                     }
 
-                    PD_Volume_Remaining = PD_Return_Path_Volume - PD_Replaced_Volume;
+                    double PD_Volume_Remaining = PD_Return_Path_Volume - PD_Replaced_Volume;
                     Est_Mode_Time = PD_Volume_Remaining / (Qrf_PD + Qp_PD);
                     Mode_RF_Volume = Qrf_PD * Est_Mode_Time;
                     Mode_Other_RF_Volume = 0;
@@ -806,9 +810,9 @@ string            Entered_Divert_Prime = "Yes";
 
                     Estimation = RBCXTT(Qwb_PD - Qac_PD, Qrf_PD, Qp_PD, 0, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
-                    Current_Patient_Volume = Estimation(0);
-                    Current_Patient_Hct = Estimation(1);
-                    Current_FCR = Estimation(2);
+                    Current_Patient_Volume = Estimation[0];
+                    Current_Patient_Hct = Estimation[1];
+                    Current_FCR = Estimation[2];
 
                     Estimation_Volume = Current_Patient_Volume;
                     Estimation_Hct = Current_Patient_Hct;
@@ -818,18 +822,18 @@ string            Entered_Divert_Prime = "Yes";
                     Predicted_Other_RF_Volume = Predicted_Other_RF_Volume + Mode_Other_RF_Volume;
 
                     Qwb_Ex = Max_WB_Rate;
-                    Qac_Ex = Qwb_Ex / (AC_Ratio + 1);
+                    double Qac_Ex = Qwb_Ex / (AC_Ratio + 1);
                     if (Qac_Ex < 1.3)
                     {
                         Predicted_Error = "AC Ratio Unachievable";
                     }
-                    if (Replacement_Volume_Override == "Override")
+                    if (Replacement_Volume_Override ==  ReplacementVolumeType.Override)
                     {
                         if (Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume <= 0)
                         {
-                            Prdicted_Error = "Increase Replacement Volume";
+                            Predicted_Error = "Increase Replacement Volume";
                         }
-                        Calculated_FCR = CalculatedFCRVR(Estimation_Hct, Avg_RF_Hct, Target_End_Hct, Target_Volume - Estimation_Volume, Estimation_Volume, Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume, (Qwb_Ex - Qac_Ex), 1);
+                        double Calculated_FCR = CalculatedFCRVR(Estimation_Hct, Avg_RF_Hct, Target_End_Hct, Target_Volume - Estimation_Volume, Estimation_Volume, Target_Replacement_Volume - RF_Used - Predicted_Replacement_Volume, (Qwb_Ex - Qac_Ex), 1);
                         Target_FCR = Calculated_FCR * Estimation_FCR;
 
                         if (Target_FCR < 0)
@@ -860,16 +864,16 @@ string            Entered_Divert_Prime = "Yes";
                         Predicted_Error = "Increase Target Fluid Balance";
                     }
 
-                    Qrf_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 1);
-                    Qp_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 2);
+                    double Qrf_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 1);
+                    double Qp_Ex = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 2);
                     Est_Mode_Time = CalculatedFCR((Qwb_Ex - Qac_Ex), Estimation_Volume, (Target_Volume - Estimation_Volume), Estimation_Hct, Estimation_FCR, Target_End_Hct, Target_FCR, Avg_RF_Hct, 3);
-                    Max_Hct = max(Estimation_Hct, Target_End_Hct);
+                    Max_Hct = Max(Estimation_Hct, Target_End_Hct);
                     Plasma_AC_Fraction = 1 / (((1 - Max_Hct) * AC_Ratio) + 1);
                     Estimated_CIR = (Qrf_Ex * Cit_Con_Rep_Fluid) + (Qp_Ex * Cit_Con_AC * Plasma_AC_Fraction);
 
                     if (Estimated_CIR > CIR_Limit)
                     {
-                        CIR_Adjustment = CIR_Limit / Estimated_CIR;
+                        double CIR_Adjustment = CIR_Limit / Estimated_CIR;
                         Qwb_Ex = Qwb_Ex * CIR_Adjustment;
                         Qac_Ex = Qac_Ex * CIR_Adjustment;
                         if (Qac_Ex < 1.3)
@@ -883,7 +887,7 @@ string            Entered_Divert_Prime = "Yes";
 
                     prbc_Hct = 0.8;
                     AC_Dilution = AC_Ratio / (AC_Ratio + 1);
-                    Max_Hct = max(Estimation_Hct, Target_End_Hct);
+                    Max_Hct = Max(Estimation_Hct, Target_End_Hct);
                     Hct_ACWB = AC_Dilution * Max_Hct;
                     Qp_max = Qwb_Ex * (1 - (Hct_ACWB / prbc_Hct));
 
@@ -928,13 +932,13 @@ string            Entered_Divert_Prime = "Yes";
                         Plasma_AC_Fraction = 1 / (((1 - Target_End_Hct) * AC_Ratio) + 1);
                     }
 
-                    Mode_Time = Est_Mode_Time;
+                    double Mode_Time = Est_Mode_Time;
 
                     Estimation = RBCXTT(Qwb_Ex - Qac_Ex, Qrf_Ex, Qp_Ex, Avg_RF_Hct, Est_Mode_Time, Estimation_Volume, Estimation_Hct, Estimation_FCR);
 
-                    Current_Patient_Volume = Estimation(0);
-                    Current_Patient_Hct = Estimation(1);
-                    Current_FCR = Estimation(2);
+                    Current_Patient_Volume = Estimation[0];
+                    Current_Patient_Hct = Estimation[1];
+                    Current_FCR = Estimation[2];
 
                     Estimation_Volume = Current_Patient_Volume;
                     Estimation_Hct = Current_Patient_Hct;
@@ -946,9 +950,11 @@ string            Entered_Divert_Prime = "Yes";
                 }
             }
 
+            double Est_Other_RF = Predicted_Other_RF_Volume;
             if (Predicted_Error == "None")
             {
-                if (Procedure_Type == "Depletion")
+                double WB_Flow_Rate;
+                if (Procedure_Type == ProcedureType.Depletion)
                 {
                     WB_Flow_Rate = Qwb_Dep;
                 }
@@ -956,7 +962,7 @@ string            Entered_Divert_Prime = "Yes";
                 {
                     WB_Flow_Rate = Qwb_Ex;
                 }
-                if (Replacement_Volume_Override == "Override")
+                if (Replacement_Volume_Override == ReplacementVolumeType.Override)
                 {
                     FCR = Estimation_FCR;
                 }
@@ -964,14 +970,12 @@ string            Entered_Divert_Prime = "Yes";
                 {
                     Replacement_Volume = Predicted_Replacement_Volume;
                 }
-                Est_Other_RF = Predicted_Other_RF_Volume;
-                Predicted_Error = Predicted_Error;
             }
             else
             {
-                WB_Flow_Rate = 0;
+                double WB_Flow_Rate = 0;
 
-                if (Replacement_Volume_Override == "Override")
+                if (Replacement_Volume_Override == ReplacementVolumeType.Override)
                 {
                     FCR = 0;
                 }
@@ -981,7 +985,6 @@ string            Entered_Divert_Prime = "Yes";
                 }
 
                 Est_Other_RF = 0;
-                Predicted_Error = Predicted_Error;
             }
 
             if (Flag == 0)
